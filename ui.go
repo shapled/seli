@@ -78,6 +78,7 @@ func InitialModel() (Model, error) {
 
 	// Create list items from directory entries
 	var items []list.Item
+	var configFiles []string
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() {
@@ -87,6 +88,7 @@ func InitialModel() (Model, error) {
 				isDir:       true,
 			})
 		} else if IsConfigFile(name) {
+			configFiles = append(configFiles, name)
 			items = append(items, Item{
 				title:       name,
 				description: "Config file",
@@ -107,13 +109,21 @@ func InitialModel() (Model, error) {
 	l.SetFilteringEnabled(false)
 	l.Styles.Title = titleStyle
 
-	return Model{
+	model := Model{
 		state:       stateBrowsing,
 		list:        l,
 		configDir:   configDir,
 		currentPath: "", // Start at root config directory
 		executor:    NewCommandExecutor(),
-	}, nil
+	}
+
+	// If there's only one config file and no directories, open it directly using the same logic
+	if len(configFiles) == 1 && len(items) == 1 {
+		updatedModel, _ := model.openConfigFile(configFiles[0])
+		return updatedModel, nil
+	}
+
+	return model, nil
 }
 
 // Init initializes the model
@@ -153,6 +163,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.state == stateBrowsing || m.state == stateViewingCommands {
 		m.list, cmd = m.list.Update(msg)
+	}
+
+	// Handle custom up/down key cycling after list update
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		switch msg.Type {
+		case tea.KeyUp:
+			// Check if we're at the first item and need to cycle
+			if m.list.Index() <= 0 && len(m.list.Items()) > 0 {
+				return m.handleUp()
+			}
+		case tea.KeyDown:
+			// Check if we're at the last item and need to cycle
+			if m.list.Index() >= len(m.list.Items())-1 && len(m.list.Items()) > 0 {
+				return m.handleDown()
+			}
+		}
 	}
 
 	return m, cmd
@@ -225,6 +251,7 @@ func (m Model) enterDirectory(dirName string) (Model, tea.Cmd) {
 	}
 
 	var items []list.Item
+	var configFiles []string
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() {
@@ -234,6 +261,7 @@ func (m Model) enterDirectory(dirName string) (Model, tea.Cmd) {
 				isDir:       true,
 			})
 		} else if IsConfigFile(name) {
+			configFiles = append(configFiles, name)
 			items = append(items, Item{
 				title:       name,
 				description: "Config file",
@@ -243,6 +271,12 @@ func (m Model) enterDirectory(dirName string) (Model, tea.Cmd) {
 	}
 
 	m.currentPath = newPath
+
+	// If there's only one config file and no directories, open it directly
+	if len(configFiles) == 1 && len(items) == 1 {
+		return m.openConfigFile(configFiles[0])
+	}
+
 	m.list.SetItems(items)
 	title := "Seli"
 	if newPath != "" {
@@ -329,6 +363,42 @@ func (m Model) goBackToBrowse() (Model, tea.Cmd) {
 		title += " - " + m.currentPath
 	}
 	m.list.Title = titleStyle.Render(title)
+
+	return m, nil
+}
+
+// handleUp handles up key press with cycling
+func (m Model) handleUp() (Model, tea.Cmd) {
+	items := m.list.Items()
+	if len(items) == 0 {
+		return m, nil
+	}
+
+	currentIndex := m.list.Index()
+	if currentIndex <= 0 {
+		// Cycle to the last item
+		m.list.Select(len(items) - 1)
+	} else {
+		m.list.Select(currentIndex - 1)
+	}
+
+	return m, nil
+}
+
+// handleDown handles down key press with cycling
+func (m Model) handleDown() (Model, tea.Cmd) {
+	items := m.list.Items()
+	if len(items) == 0 {
+		return m, nil
+	}
+
+	currentIndex := m.list.Index()
+	if currentIndex >= len(items)-1 {
+		// Cycle to the first item
+		m.list.Select(0)
+	} else {
+		m.list.Select(currentIndex + 1)
+	}
 
 	return m, nil
 }
