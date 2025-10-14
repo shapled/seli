@@ -13,13 +13,10 @@ Seli 是一个基于 TUI 的命令行工具启动器，让你方便地管理和�
 
 ## 安装
 
-```bash
-# 直接安装到 $GOPATH/bin
-go install github.com/shapled/seli@latest
+直接安装到 $GOPATH/bin
 
-# 确保 $GOPATH/bin 在你的 PATH 中
-echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.zshrc  # 或 ~/.bashrc
-source ~/.zshrc  # 或 ~/.bashrc
+```bash
+go install github.com/shapled/seli@latest
 ```
 
 ## 使用方法

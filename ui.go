@@ -263,8 +263,21 @@ func (m Model) openConfigFile(filename string) (Model, tea.Cmd) {
 		return m, nil
 	}
 
+	items := createCommandItems(config)
+
+	m.state = stateViewingCommands
+	m.currentConfig = config
+	m.list.SetItems(items)
+	m.list.Title = titleStyle.Render(fmt.Sprintf("Commands in %s", config.Name))
+
+	return m, nil
+}
+
+// createCommandItems creates a slice of list.Item from a ConfigFile
+func createCommandItems(config *ConfigFile) []list.Item {
 	var items []list.Item
 	for _, cmd := range config.Commands {
+		cmd := cmd // Create a new variable for the current iteration
 		description := cmd.Description
 		if description == "" {
 			description = cmd.Command
@@ -276,13 +289,7 @@ func (m Model) openConfigFile(filename string) (Model, tea.Cmd) {
 			command:     &cmd,
 		})
 	}
-
-	m.state = stateViewingCommands
-	m.currentConfig = config
-	m.list.SetItems(items)
-	m.list.Title = titleStyle.Render(fmt.Sprintf("Commands in %s", config.Name))
-
-	return m, nil
+	return items
 }
 
 // goBackToBrowse returns to directory browsing
