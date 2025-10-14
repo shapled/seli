@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/list"
 )
 
@@ -388,5 +389,51 @@ func TestInitialModelWithSingleConfigFile(t *testing.T) {
 
 	if firstItem.title != "root-cmd" {
 		t.Errorf("Expected first command to be 'root-cmd', got '%s'", firstItem.title)
+	}
+}
+
+// TestListCycling tests the complete cycling behavior for list navigation
+func TestListCycling(t *testing.T) {
+	// Test the complete user scenario: multiple rapid key presses with proper cycling
+	items := []list.Item{
+		Item{title: "Item 1", description: "First item"},
+		Item{title: "Item 2", description: "Second item"},
+		Item{title: "Item 3", description: "Third item"},
+	}
+
+	model := Model{
+		state: stateBrowsing,
+		list:  list.New(items, list.NewDefaultDelegate(), 0, 0),
+		width: 80,
+		height: 24,
+	}
+
+	// Test up key cycling: should go 0 -> 2 -> 1 -> 0 -> 2...
+	testSequence := []struct {
+		key     tea.KeyType
+		expect  int
+		desc    string
+	}{
+		{tea.KeyUp, 2, "UP from first should cycle to last"},
+		{tea.KeyUp, 1, "UP from last should go to middle"},
+		{tea.KeyUp, 0, "UP from middle should go to first"},
+		{tea.KeyUp, 2, "UP from first should cycle to last again"},
+		{tea.KeyDown, 0, "DOWN from last should cycle to first"},
+		{tea.KeyDown, 1, "DOWN from first should go to middle"},
+		{tea.KeyDown, 2, "DOWN from middle should go to last"},
+		{tea.KeyDown, 0, "DOWN from last should cycle to first again"},
+	}
+
+	// Start at first item
+	model.list.Select(0)
+
+	for i, test := range testSequence {
+		msg := tea.KeyMsg{Type: test.key}
+		updatedModel, _ := model.Update(msg)
+		model = updatedModel.(Model)
+
+		if model.list.Index() != test.expect {
+			t.Errorf("Test %d (%s): Expected index %d, got %d", i+1, test.desc, test.expect, model.list.Index())
+		}
 	}
 }

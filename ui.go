@@ -152,6 +152,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(msg.Runes) > 0 && msg.Runes[0] == 'q' && m.state == stateViewingCommands {
 				return m.goBackToBrowse()
 			}
+
+		case tea.KeyUp:
+			if m.state == stateBrowsing || m.state == stateViewingCommands {
+				// Handle cycling logic BEFORE letting the list process the key
+				if len(m.list.Items()) > 0 {
+					currentIndex := m.list.Index()
+					if currentIndex <= 0 {
+						// We're at the first item, cycle to the last item
+						return m.handleUp()
+					}
+				}
+			}
+
+		case tea.KeyDown:
+			if m.state == stateBrowsing || m.state == stateViewingCommands {
+				// Handle cycling logic BEFORE letting the list process the key
+				if len(m.list.Items()) > 0 {
+					currentIndex := m.list.Index()
+					if currentIndex >= len(m.list.Items())-1 {
+						// We're at the last item, cycle to the first item
+						return m.handleDown()
+					}
+				}
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -163,22 +187,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	if m.state == stateBrowsing || m.state == stateViewingCommands {
 		m.list, cmd = m.list.Update(msg)
-	}
-
-	// Handle custom up/down key cycling after list update
-	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch msg.Type {
-		case tea.KeyUp:
-			// Check if we're at the first item and need to cycle
-			if m.list.Index() <= 0 && len(m.list.Items()) > 0 {
-				return m.handleUp()
-			}
-		case tea.KeyDown:
-			// Check if we're at the last item and need to cycle
-			if m.list.Index() >= len(m.list.Items())-1 && len(m.list.Items()) > 0 {
-				return m.handleDown()
-			}
-		}
 	}
 
 	return m, cmd
