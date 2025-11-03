@@ -150,18 +150,6 @@ args = ["stop", "$(docker ps -q)"]
 - **q**: Return to directory browsing (in command list)
 - **Esc/Ctrl+C**: Exit the program
 
-### 4. Folder Structure
-
-```
-~/.seli/
-├── development.json    # Development related commands
-├── system.yaml        # System administration commands
-├── docker.toml        # Docker related commands
-└── work/              # Work related configuration
-    ├── projects.json
-    └── scripts.yaml
-```
-
 ## 📖 Configuration File Field Description
 
 ### Command Fields
@@ -181,14 +169,14 @@ args = ["stop", "$(docker ps -q)"]
 Environment variable replacement follows the following priority (from high to low):
 
 1. **Command-level environment variables** (variables defined in the `env` field)
-2. **Variables in `.env` files** (`~/.seli/.env` and `.env` in the configuration directory)
-3. **System environment variables** (system-level environment variables)
+2. **System environment variables** (system-level environment variables)
+3. **Variables in `.env` files** (`~/.seli/.env` and `.env` in the configuration directory)
 
 ### Variable Replacement Rules
 
 - Support `${VAR_NAME}` format variable replacement
-- Command-level environment variables can reference variables in `.env` files
 - Support escape characters `\${VAR_NAME}` to avoid variable replacement
+- Command-level environment variables can reference variables in `.env` files
 - Variable replacement occurs during configuration loading
 
 ## Contributing
