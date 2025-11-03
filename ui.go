@@ -286,6 +286,10 @@ func (m Model) enterDirectory(dirName string) (Model, tea.Cmd) {
 	}
 
 	m.list.SetItems(items)
+	// Reset selection to first item when entering directory
+	if len(items) > 0 {
+		m.list.Select(0)
+	}
 	title := "Seli"
 	if newPath != "" {
 		title += " - " + newPath
@@ -310,6 +314,10 @@ func (m Model) openConfigFile(filename string) (Model, tea.Cmd) {
 	m.state = stateViewingCommands
 	m.currentConfig = config
 	m.list.SetItems(items)
+	// Reset selection to first command when opening config file
+	if len(items) > 0 {
+		m.list.Select(0)
+	}
 	m.list.Title = titleStyle.Render(fmt.Sprintf("Commands in %s", config.Name))
 
 	return m, nil

@@ -1,37 +1,85 @@
-# Seli - 命令行启动器
+# Seli - Command Line Launcher
 
-Seli 是一个基于 TUI 的命令行工具启动器，让你方便地管理和执行预设的命令。
+English | [简体中文](docs/README_CN.md)
 
-## 功能特性
+Seli is a TUI-based command line tool launcher that allows you to conveniently manage and execute preset commands.
 
-- 🎨 美观的终端用户界面 (TUI)
-- 📁 支持文件夹和文件浏览
-- 📄 支持 JSON、YAML、TOML 配置文件格式
-- 🚀 支持环境变量和工作目录配置
-- ⌨️ 键盘快捷键操作
-- 🏠 自动创建 `~/.seli/` 配置目录
+## ✨ Features
 
-## 安装
+- 🎨 **Beautiful Terminal User Interface** - Modern TUI design
+- 📁 **Folder and File Browsing** - Support for hierarchical directory navigation
+- 📄 **Multi-format Configuration Files** - Support for JSON, YAML, TOML formats
+- 🚀 **Environment Variable Support** - Support for `.env` files and command-level environment variables
+- 🔄 **Smart Variable Replacement** - Support for dynamic environment variable replacement in configurations
+- 🎯 **Command Display Control** - Control command visibility through the `show` field
+- 📂 **Working Directory Configuration** - Each command can set an independent working directory
+- ⌨️ **Keyboard Shortcuts** - Intuitive keyboard operations
+- 🏠 **Auto-configuration Directory** - Automatically create `~/.seli/` configuration directory
+- 🔄 **Cyclic Navigation** - List end-to-end cyclic navigation
 
-直接安装到 $GOPATH/bin
+## 🎬 Demo
+
+![Terminal Demo Animation](./demo.gif)
+
+## 🚀 Quick Start
+
+### 1. Installation
 
 ```bash
 go install github.com/shapled/seli@latest
 ```
 
-## 使用方法
-
-### 1. 运行程序
+### 2. Create Configuration
 
 ```bash
-./seli
+# create config directory
+mkdir ~/.seli
+
+# create env file
+echo 'TEST_ENV_A=Apple
+TEST_ENV_B=Banana' > ~/.seli/.env
+
+# create config file
+echo 'name: Fruits Commands
+description: Demonstrates setting and using specific environment variables for command execution.
+
+commands:
+  - name: "Show Fruit A"
+    description: "Sets TEST_ENV_A and prints it."
+    command: "echo"
+    args: ["Fruit A is: ${TEST_ENV_A}"]
+
+  - name: "Show Fruit B"
+    description: "Sets TEST_ENV_B and runs in tmp directory."
+    command: "sh"
+    args: ["-c", "echo \\${PWD}; echo Fruit B is: ${TEST_ENV_B}"]
+    workDir: "/tmp"
+    show: true
+
+  - name: "Show Fruit C"
+    description: "Sets TEST_ENV_C and shows usage."
+    command: "echo"
+    args: ["Cherry", "details:", "${TEST_ENV_C}"]
+    env:
+      TEST_ENV_C: "Cherry - Often used in juice"' > ~/.seli/fruits.yml
+
+# run
+seli
 ```
 
-### 2. 配置文件结构
+## Usage
 
-在 `~/.seli/` 目录下创建配置文件，支持以下格式：
+### 1. Run the Program
 
-#### JSON 格式 (`development.json`)
+```bash
+seli
+```
+
+### 2. Configuration File Structure
+
+Create configuration files in the `~/.seli/` directory, supporting the following formats:
+
+#### JSON Format (`development.json`)
 
 ```json
 {
@@ -58,7 +106,7 @@ go install github.com/shapled/seli@latest
 }
 ```
 
-#### YAML 格式 (`system.yaml`)
+#### YAML Format (`system.yaml`)
 
 ```yaml
 name: System Commands
@@ -75,7 +123,7 @@ commands:
     args: ["-h"]
 ```
 
-#### TOML 格式 (`docker.toml`)
+#### TOML Format (`docker.toml`)
 
 ```toml
 name = "Docker Commands"
@@ -94,50 +142,59 @@ command = "docker"
 args = ["stop", "$(docker ps -q)"]
 ```
 
-### 3. 键盘操作
+### 3. Keyboard Operations
 
-- **↑/↓** 或 **j/k**: 上下移动选择
-- **Enter**: 选择文件/文件夹或执行命令
-- **Backspace**: 返回上级目录（在命令列表中）
-- **q**: 返回目录浏览（在命令列表中）
-- **Esc/Ctrl+C**: 退出程序
+- **↑/↓** or **j/k**: Move up and down to select
+- **Enter**: Select file/folder or execute command
+- **Backspace**: Return to parent directory (in command list)
+- **q**: Return to directory browsing (in command list)
+- **Esc/Ctrl+C**: Exit the program
 
-### 4. 文件夹结构
+### 4. Folder Structure
 
 ```
 ~/.seli/
-├── development.json    # 开发相关命令
-├── system.yaml        # 系统管理命令
-├── docker.toml        # Docker 相关命令
-└── work/              # 工作相关配置
+├── development.json    # Development related commands
+├── system.yaml        # System administration commands
+├── docker.toml        # Docker related commands
+└── work/              # Work related configuration
     ├── projects.json
     └── scripts.yaml
 ```
 
-## 配置文件字段说明
+## 📖 Configuration File Field Description
 
-| 字段          | 类型              | 必填 | 说明                 |
-| ------------- | ----------------- | ---- | -------------------- |
-| `name`        | string            | 是   | 配置文件或命令的名称 |
-| `description` | string            | 否   | 描述信息             |
-| `command`     | string            | 是   | 要执行的命令         |
-| `args`        | []string          | 否   | 命令参数             |
-| `env`         | map[string]string | 否   | 环境变量             |
-| `workDir`     | string            | 否   | 工作目录             |
+### Command Fields
 
-## 示例配置
+| Field         | Type              | Required | Description                               |
+| ------------- | ----------------- | -------- | ----------------------------------------- |
+| `name`        | string            | Yes      | Name of the configuration file or command |
+| `description` | string            | No       | Description information                   |
+| `command`     | string            | Yes      | Command to execute                        |
+| `args`        | []string          | No       | Command arguments                         |
+| `env`         | map[string]string | No       | Command-level environment variables       |
+| `workDir`     | string            | No       | Working directory                         |
+| `show`        | bool              | No       | Whether to display in command list        |
 
-项目已提供了一些示例配置文件，你可以根据需要修改：
+### Environment Variable Priority
 
-- `development.json`: 开发工具命令
-- `system.yaml`: 系统管理命令
-- `docker.toml`: Docker 管理命令
-- `work/projects.json`: 工作项目命令
+Environment variable replacement follows the following priority (from high to low):
 
-## 贡献
+1. **Command-level environment variables** (variables defined in the `env` field)
+2. **Variables in `.env` files** (`~/.seli/.env` and `.env` in the configuration directory)
+3. **System environment variables** (system-level environment variables)
 
-欢迎提交 Issue 和 Pull Request！
+### Variable Replacement Rules
 
-## 许可证
+- Support `${VAR_NAME}` format variable replacement
+- Command-level environment variables can reference variables in `.env` files
+- Support escape characters `\${VAR_NAME}` to avoid variable replacement
+- Variable replacement occurs during configuration loading
+
+## Contributing
+
+Welcome to submit Issues and Pull Requests!
+
+## License
 
 MIT License

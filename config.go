@@ -245,24 +245,38 @@ func ProcessConfigWithEnv(config *ConfigFile, configPath string) error {
 		}
 	}
 
-	
+
 	// Process environment variable expansion for all commands
 	for i := range config.Commands {
-		// Expand command
-		config.Commands[i].Command = ExpandEnvVars(config.Commands[i].Command, envVars)
+		// First, expand env values using global environment variables
+		expandedEnv := make(map[string]string)
+		for k, v := range config.Commands[i].Env {
+			expandedEnv[k] = ExpandEnvVars(v, envVars)
+		}
+
+		// Create command-specific environment by merging global env with command env
+		// Command env has higher priority
+		commandEnv := make(map[string]string)
+		for k, v := range envVars {
+			commandEnv[k] = v
+		}
+		for k, v := range expandedEnv {
+			commandEnv[k] = v
+		}
+
+		// Now expand command fields using the merged environment
+		config.Commands[i].Command = ExpandEnvVars(config.Commands[i].Command, commandEnv)
 
 		// Expand args
 		for j := range config.Commands[i].Args {
-			config.Commands[i].Args[j] = ExpandEnvVars(config.Commands[i].Args[j], envVars)
+			config.Commands[i].Args[j] = ExpandEnvVars(config.Commands[i].Args[j], commandEnv)
 		}
 
-		// Expand env values
-		for k, v := range config.Commands[i].Env {
-			config.Commands[i].Env[k] = ExpandEnvVars(v, envVars)
-		}
+		// Update env with expanded values
+		config.Commands[i].Env = expandedEnv
 
 		// Expand workDir
-		config.Commands[i].WorkDir = ExpandEnvVars(config.Commands[i].WorkDir, envVars)
+		config.Commands[i].WorkDir = ExpandEnvVars(config.Commands[i].WorkDir, commandEnv)
 	}
 
 	return nil
