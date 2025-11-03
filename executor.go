@@ -45,6 +45,7 @@ func (e *CommandExecutor) ExecuteCommand(config CommandConfig, fileShow *bool) e
 
 	// Show command details if requested
 	if shouldShow {
+		fmt.Printf("\nExecuting command: %s\n", config.Name)
 		fmt.Printf("Executing: %s", displayArgs[0])
 		for i := 1; i < len(displayArgs); i++ {
 			fmt.Printf(" %q", displayArgs[i])
