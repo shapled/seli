@@ -47,7 +47,7 @@ func main() {
 				fmt.Println()
 
 				// Execute the command
-				err := model.executor.ExecuteCommand(*item.command)
+				err := model.executor.ExecuteCommand(*item.command, model.currentConfig.Show)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error executing command: %v\n", err)
 					os.Exit(1)

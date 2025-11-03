@@ -58,7 +58,7 @@ func TestCommandExecutor_ExecuteCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := executor.ExecuteCommand(tt.command)
+			err := executor.ExecuteCommand(tt.command, nil)
 			if (err != nil) != tt.expectError {
 				t.Errorf("ExecuteCommand() error = %v, expectError %v", err, tt.expectError)
 			}
@@ -98,7 +98,7 @@ func TestCommandExecutor_WithEmptyCommand(t *testing.T) {
 		Command: "",
 	}
 
-	err := executor.ExecuteCommand(command)
+	err := executor.ExecuteCommand(command, nil)
 	if err == nil {
 		t.Error("expected error for empty command")
 	}

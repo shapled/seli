@@ -129,3 +129,181 @@ func TestLoadConfigFileWithNonExistentFile(t *testing.T) {
 		t.Error("expected error for non-existent file")
 	}
 }
+
+func TestExpandEnvVars(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		envVars  map[string]string
+		expected string
+	}{
+		{
+			name:     "simple variable substitution",
+			input:    "Hello ${WORLD}",
+			envVars:  map[string]string{"WORLD": "Go"},
+			expected: "Hello Go",
+		},
+		{
+			name:     "escaped dollar sign",
+			input:    "Price: \\$100",
+			envVars:  map[string]string{},
+			expected: "Price: $100",
+		},
+		{
+			name:     "escaped variable syntax",
+			input:    "Literal: \\${NOT_A_VAR}",
+			envVars:  map[string]string{},
+			expected: "Literal: ${NOT_A_VAR}",
+		},
+		{
+			name:     "non-existent variable",
+			input:    "Value: ${MISSING}",
+			envVars:  map[string]string{},
+			expected: "Value: ",
+		},
+		{
+			name:     "multiple variables",
+			input:    "${FIRST} and ${SECOND}",
+			envVars:  map[string]string{"FIRST": "A", "SECOND": "B"},
+			expected: "A and B",
+		},
+		{
+			name:     "no variables",
+			input:    "Just plain text",
+			envVars:  map[string]string{},
+			expected: "Just plain text",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ExpandEnvVars(tt.input, tt.envVars)
+			if result != tt.expected {
+				t.Errorf("ExpandEnvVars(%q, envVars) = %q; want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseEnvFile(t *testing.T) {
+	// Create a temporary .env file
+	envContent := `# This is a comment
+BASIC_VAR=simple_value
+COMPLEX_VAR="value with spaces"
+QUOTED_VAR='single quoted'
+EMPTY_VAR=
+# Another comment
+WORK_DIR=/tmp/test`
+
+	tmpFile := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(tmpFile, []byte(envContent), 0644); err != nil {
+		t.Fatalf("Failed to create temp .env file: %v", err)
+	}
+
+	envVars, err := parseEnvFile(tmpFile)
+	if err != nil {
+		t.Fatalf("parseEnvFile failed: %v", err)
+	}
+
+	expectedVars := map[string]string{
+		"BASIC_VAR":   "simple_value",
+		"COMPLEX_VAR": "value with spaces",
+		"QUOTED_VAR":  "single quoted",
+		"EMPTY_VAR":   "",
+		"WORK_DIR":    "/tmp/test",
+	}
+
+	if len(envVars) != len(expectedVars) {
+		t.Errorf("Expected %d variables, got %d", len(expectedVars), len(envVars))
+	}
+
+	for key, expected := range expectedVars {
+		if actual, exists := envVars[key]; !exists {
+			t.Errorf("Missing variable: %s", key)
+		} else if actual != expected {
+			t.Errorf("Variable %s: expected %q, got %q", key, expected, actual)
+		}
+	}
+}
+
+func TestProcessConfigWithEnv(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Create a temporary .env file in the same directory as the config file
+	envContent := `BASIC_VAR=basic_value
+COMPLEX_VAR="complex value with spaces"
+WORK_DIR=/tmp/test`
+
+	envFile := filepath.Join(tempDir, ".env")
+	if err := os.WriteFile(envFile, []byte(envContent), 0644); err != nil {
+		t.Fatalf("Failed to create temp .env file: %v", err)
+	}
+
+	// Create a temporary config file
+	configContent := `{
+		"name": "Test Config",
+		"show": true,
+		"commands": [
+			{
+				"name": "Test Command",
+				"command": "echo",
+				"args": ["${BASIC_VAR}", "\\${ESCAPED}", "${COMPLEX_VAR}"],
+				"workDir": "${WORK_DIR}",
+				"env": {
+					"LOCAL_VAR": "${BASIC_VAR}_local"
+				},
+				"show": false
+			}
+		]
+	}`
+
+	configFile := filepath.Join(tempDir, "test.json")
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to create temp config file: %v", err)
+	}
+
+	// Load and process the config
+	config, err := LoadConfigFile(configFile)
+	if err != nil {
+		t.Fatalf("LoadConfigFile failed: %v", err)
+	}
+
+	
+	// Verify environment variable expansion
+	if len(config.Commands) != 1 {
+		t.Fatalf("Expected 1 command, got %d", len(config.Commands))
+	}
+
+	cmd := config.Commands[0]
+
+	// Check command arguments
+	expectedArgs := []string{"basic_value", "${ESCAPED}", "complex value with spaces"}
+	if len(cmd.Args) != len(expectedArgs) {
+		t.Errorf("Expected %d args, got %d", len(expectedArgs), len(cmd.Args))
+	}
+	for i, expected := range expectedArgs {
+		if i < len(cmd.Args) && cmd.Args[i] != expected {
+			t.Errorf("Arg %d: expected %q, got %q", i, expected, cmd.Args[i])
+		}
+	}
+
+	// Check work directory expansion
+	if cmd.WorkDir != "/tmp/test" {
+		t.Errorf("Expected workDir %q, got %q", "/tmp/test", cmd.WorkDir)
+	}
+
+	// Check local environment variable expansion
+	if localVar, exists := cmd.Env["LOCAL_VAR"]; !exists {
+		t.Error("LOCAL_VAR not found in command env")
+	} else if localVar != "basic_value_local" {
+		t.Errorf("Expected LOCAL_VAR %q, got %q", "basic_value_local", localVar)
+	}
+
+	// Check show settings
+	if config.Show == nil || *config.Show != true {
+		t.Error("Expected file-level show to be true")
+	}
+	if cmd.Show == nil || *cmd.Show != false {
+		t.Error("Expected command-level show to be false")
+	}
+}

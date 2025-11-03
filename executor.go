@@ -16,21 +16,53 @@ func NewCommandExecutor() *CommandExecutor {
 }
 
 // ExecuteCommand executes a command with the given configuration
-func (e *CommandExecutor) ExecuteCommand(config CommandConfig) error {
+func (e *CommandExecutor) ExecuteCommand(config CommandConfig, fileShow *bool) error {
+	// Determine if we should show command details
+	shouldShow := false
+	if config.Show != nil {
+		shouldShow = *config.Show
+	} else if fileShow != nil {
+		shouldShow = *fileShow
+	}
+
 	// Prepare the command and arguments
 	var cmd *exec.Cmd
+	var displayArgs []string
 
 	if len(config.Args) > 0 {
 		// Command with arguments
-		args := append([]string{config.Command}, config.Args...)
-		cmd = exec.Command(args[0], args[1:]...)
+		displayArgs = append([]string{config.Command}, config.Args...)
+		cmd = exec.Command(displayArgs[0], displayArgs[1:]...)
 	} else {
 		// Simple command (may contain spaces, need to split)
 		parts := strings.Fields(config.Command)
 		if len(parts) == 0 {
 			return fmt.Errorf("empty command")
 		}
+		displayArgs = parts
 		cmd = exec.Command(parts[0], parts[1:]...)
+	}
+
+	// Show command details if requested
+	if shouldShow {
+		fmt.Printf("Executing: %s", displayArgs[0])
+		for i := 1; i < len(displayArgs); i++ {
+			fmt.Printf(" %q", displayArgs[i])
+		}
+		fmt.Println()
+
+		if len(config.Env) > 0 {
+			fmt.Println("Environment variables:")
+			for k, v := range config.Env {
+				fmt.Printf("  %s=%q\n", k, v)
+			}
+		}
+
+		if config.WorkDir != "" {
+			fmt.Printf("Working directory: %q\n", config.WorkDir)
+		}
+
+		fmt.Println()
 	}
 
 	// Set working directory if specified
